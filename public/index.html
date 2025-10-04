@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Field Localizer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Side Panel -->
+        <div class="side-panel">
+            <h2>Field Selector</h2>
+            <div id="fieldSelector" class="field-selector">
+                <!-- Fields will be populated here -->
+            </div>
+            
+            <div class="controls">
+                <h3>Navigation</h3>
+                <div class="nav-buttons">
+                    <button id="prevBtn" class="btn">← Previous</button>
+                    <button id="nextBtn" class="btn">Next →</button>
+                </div>
+                
+                <div class="jump-section">
+                    <label for="imageSelect">Jump to image:</label>
+                    <select id="imageSelect" class="image-select">
+                        <!-- Images will be populated here -->
+                    </select>
+                </div>
+                
+                <button id="saveBtn" class="btn btn-save">💾 Save Changes</button>
+            </div>
+            
+            <div class="info-section">
+                <h3>Current Image</h3>
+                <div id="imagePath" class="image-path">No image loaded</div>
+            </div>
+            
+            <div class="instructions">
+                <h3>Instructions</h3>
+                <ul>
+                    <li>Select a field from the list above</li>
+                    <li>Click on any OCR box to assign it to the selected field</li>
+                    <li>Click "Save Changes" to persist your edits</li>
+                    <li>Use navigation buttons or dropdown to switch images</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Main Canvas Area -->
+        <div class="main-content">
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
