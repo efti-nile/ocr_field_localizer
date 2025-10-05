@@ -109,16 +109,12 @@ function drawImage() {
     if (currentData.fields) {
         const fieldNames = Object.keys(currentData.fields);
         fieldNames.forEach((fieldName, idx) => {
-            const boxes = currentData.fields[fieldName];
+            const box = currentData.fields[fieldName];
             const color = FIELD_COLORS[idx % FIELD_COLORS.length];
             
-            if (Array.isArray(boxes)) {
-                boxes.forEach(box => {
-                    drawBox(box, color, 3);
-                });
-            } else {
-                // Single box
-                drawBox(boxes, color, 3);
+            // Each field has only one box (not an array)
+            if (box && box.length === 4) {
+                drawBox(box, color, 3);
             }
         });
     }
@@ -210,17 +206,8 @@ function handleCanvasClick(event) {
         // Remove box from any existing field
         removeBoxFromAllFields(clickedBox);
         
-        // Add box to selected field
-        if (!currentData.fields[selectedField]) {
-            currentData.fields[selectedField] = [];
-        }
-        
-        // Ensure fields[selectedField] is an array
-        if (!Array.isArray(currentData.fields[selectedField])) {
-            currentData.fields[selectedField] = [currentData.fields[selectedField]];
-        }
-        
-        currentData.fields[selectedField].push(clickedBox);
+        // Assign the box to the selected field (replace any existing box)
+        currentData.fields[selectedField] = clickedBox;
         
         // Redraw
         drawImage();
@@ -261,12 +248,11 @@ function removeBoxFromAllFields(box) {
     if (!currentData.fields) return;
     
     Object.keys(currentData.fields).forEach(fieldName => {
-        const fieldBoxes = currentData.fields[fieldName];
+        const fieldBox = currentData.fields[fieldName];
         
-        if (Array.isArray(fieldBoxes)) {
-            currentData.fields[fieldName] = fieldBoxes.filter(b => !boxesEqual(b, box));
-        } else if (boxesEqual(fieldBoxes, box)) {
-            currentData.fields[fieldName] = [];
+        // Each field has only one box, so just check if it matches
+        if (boxesEqual(fieldBox, box)) {
+            delete currentData.fields[fieldName];
         }
     });
 }
