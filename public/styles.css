@@ -118,6 +118,24 @@ body {
     background: #229954;
 }
 
+.btn-reset {
+    width: 100%;
+    background: #e74c3c;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    padding: 10px;
+}
+
+.btn-reset:hover {
+    background: #c0392b;
+}
+
+.btn-reset:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
+
 .jump-section {
     margin-bottom: 15px;
 }
@@ -141,6 +159,17 @@ body {
 .info-section {
     border-top: 1px solid #eee;
     padding-top: 20px;
+}
+
+.image-counter {
+    padding: 8px 10px;
+    background: #e3f2fd;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1976d2;
+    margin-bottom: 10px;
+    text-align: center;
 }
 
 .image-path {

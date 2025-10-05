@@ -27,6 +27,7 @@ async function init() {
     document.getElementById('prevBtn').addEventListener('click', () => navigateImage(-1));
     document.getElementById('nextBtn').addEventListener('click', () => navigateImage(1));
     document.getElementById('saveBtn').addEventListener('click', saveData);
+    document.getElementById('resetFieldBtn').addEventListener('click', resetCurrentField);
     document.getElementById('imageSelect').addEventListener('change', (e) => {
         currentImageIndex = parseInt(e.target.value);
         loadImage(currentImageIndex);
@@ -101,7 +102,7 @@ function drawImage() {
     // Draw OCR boxes (neutral color)
     if (currentData.ocr) {
         currentData.ocr.forEach(box => {
-            drawBox(box, OCR_COLOR, 2);
+            drawBox(box, OCR_COLOR, 4);
         });
     }
     
@@ -114,7 +115,8 @@ function drawImage() {
             
             // Each field has only one box (not an array)
             if (box && box.length === 4) {
-                drawBox(box, color, 3);
+                drawBox(box, color, 5);
+                drawLabel(box, fieldName, color);
             }
         });
     }
@@ -135,8 +137,36 @@ function drawBox(box, color, lineWidth) {
     ctx.stroke();
 }
 
+// Draw a label for a field box
+function drawLabel(box, fieldName, color) {
+    if (!box || box.length !== 4) return;
+    
+    // Position label at the top-left corner of the box
+    const x = box[0][0];
+    const y = box[0][1];
+    
+    // Set font and measure text
+    ctx.font = 'bold 32px Arial';
+    const textMetrics = ctx.measureText(fieldName);
+    const textWidth = textMetrics.width;
+    const textHeight = 40;
+    
+    // Draw background rectangle
+    const padding = 6;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y - textHeight - padding, textWidth + padding * 2, textHeight + padding);
+    
+    // Draw text
+    ctx.fillStyle = '#000000';
+    ctx.textBaseline = 'top';
+    ctx.fillText(fieldName, x + padding, y - textHeight - padding / 2);
+}
+
 // Update UI elements
 function updateUI() {
+    // Update image counter
+    document.getElementById('imageCounter').textContent = `Image ${currentImageIndex + 1} of ${images.length}`;
+    
     // Update image path
     document.getElementById('imagePath').textContent = images[currentImageIndex].imagePath;
     
@@ -146,6 +176,9 @@ function updateUI() {
     // Update navigation buttons
     document.getElementById('prevBtn').disabled = currentImageIndex === 0;
     document.getElementById('nextBtn').disabled = currentImageIndex === images.length - 1;
+    
+    // Update reset button state
+    document.getElementById('resetFieldBtn').disabled = !selectedField;
     
     // Update field selector
     updateFieldSelector();
@@ -182,6 +215,8 @@ function updateFieldSelector() {
         item.addEventListener('click', () => {
             selectedField = item.dataset.field;
             updateFieldSelector();
+            // Update reset button state
+            document.getElementById('resetFieldBtn').disabled = false;
         });
     });
 }
@@ -252,7 +287,8 @@ function removeBoxFromAllFields(box) {
         
         // Each field has only one box, so just check if it matches
         if (boxesEqual(fieldBox, box)) {
-            delete currentData.fields[fieldName];
+            // Set to null instead of deleting to preserve the field
+            currentData.fields[fieldName] = null;
         }
     });
 }
@@ -267,6 +303,20 @@ function boxesEqual(box1, box2) {
         }
     }
     return true;
+}
+
+// Reset the current selected field
+function resetCurrentField() {
+    if (!selectedField) {
+        alert('Please select a field first!');
+        return;
+    }
+    
+    // Set the field's box to null
+    currentData.fields[selectedField] = null;
+    
+    // Redraw the image
+    drawImage();
 }
 
 // Navigate to next/previous image
