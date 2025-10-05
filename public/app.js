@@ -5,6 +5,7 @@ let currentData = null;
 let selectedField = null;
 let img = new Image();
 let canvas, ctx;
+let progress = { viewed: [], updated: [] };
 
 // Zoom and pan state
 let zoomLevel = 1.0;
@@ -65,16 +66,29 @@ async function loadImagesList() {
         const response = await fetch('/api/images');
         images = await response.json();
         
-        // Populate image selector
+        // Load progress data
+        const progressResponse = await fetch('/api/progress');
+        progress = await progressResponse.json();
+        
+        // Populate image selector with status indicators
         const select = document.getElementById('imageSelect');
-        select.innerHTML = images.map((img, idx) => 
-            `<option value="${idx}">${img.imagePath}</option>`
-        ).join('');
+        select.innerHTML = images.map((img, idx) => {
+            const status = getImageStatus(img.id);
+            const statusIcon = status === 'updated' ? '✓' : status === 'viewed' ? '👁' : '○';
+            return `<option value="${idx}">${statusIcon} ${img.imagePath}</option>`;
+        }).join('');
         
     } catch (error) {
         console.error('Error loading images:', error);
         alert('Error loading images. Make sure the data folder exists and contains images.');
     }
+}
+
+// Get image status
+function getImageStatus(imgId) {
+    if (progress.updated.includes(imgId)) return 'updated';
+    if (progress.viewed.includes(imgId)) return 'viewed';
+    return 'unviewed';
 }
 
 // Load specific image and its data
@@ -108,10 +122,37 @@ async function loadImage(index) {
             updateUI();
         };
         
+        // Mark image as viewed
+        markAsViewed(imageInfo.id);
+        
     } catch (error) {
         console.error('Error loading image:', error);
         alert('Error loading image data.');
     }
+}
+
+// Mark image as viewed
+async function markAsViewed(imgId) {
+    try {
+        await fetch(`/api/progress/viewed/${imgId}`, { method: 'POST' });
+        if (!progress.viewed.includes(imgId)) {
+            progress.viewed.push(imgId);
+        }
+        updateImageSelector();
+    } catch (error) {
+        console.error('Error marking image as viewed:', error);
+    }
+}
+
+// Update image selector with status
+function updateImageSelector() {
+    const select = document.getElementById('imageSelect');
+    select.innerHTML = images.map((img, idx) => {
+        const status = getImageStatus(img.id);
+        const statusIcon = status === 'updated' ? '✓' : status === 'viewed' ? '👁' : '○';
+        return `<option value="${idx}">${statusIcon} ${img.imagePath}</option>`;
+    }).join('');
+    select.value = currentImageIndex;
 }
 
 // Draw image and all boxes
@@ -203,6 +244,23 @@ function updateUI() {
     
     // Update image path
     document.getElementById('imagePath').textContent = images[currentImageIndex].imagePath;
+    
+    // Update image status
+    const currentImgId = images[currentImageIndex].id;
+    const status = getImageStatus(currentImgId);
+    const statusText = status === 'updated' ? '✓ Updated' : status === 'viewed' ? '👁 Viewed' : '○ Not viewed';
+    const statusEl = document.getElementById('imageStatus');
+    statusEl.textContent = `Status: ${statusText}`;
+    statusEl.style.background = status === 'updated' ? '#d4edda' : status === 'viewed' ? '#fff3cd' : '#f8d7da';
+    statusEl.style.color = status === 'updated' ? '#155724' : status === 'viewed' ? '#856404' : '#721c24';
+    
+    // Update progress statistics
+    const unviewedCount = images.length - progress.viewed.length;
+    const viewedCount = progress.viewed.length - progress.updated.length;
+    const updatedCount = progress.updated.length;
+    document.getElementById('unviewedCount').textContent = unviewedCount;
+    document.getElementById('viewedCount').textContent = viewedCount;
+    document.getElementById('updatedCount').textContent = updatedCount;
     
     // Update image selector
     document.getElementById('imageSelect').value = currentImageIndex;

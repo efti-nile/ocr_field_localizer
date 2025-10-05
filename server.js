@@ -13,6 +13,28 @@ app.use(express.static('public'));
 
 // Configuration - folder containing images and JSON files
 const DATA_FOLDER = process.env.DATA_FOLDER || './data';
+const PROGRESS_FILE = path.join(DATA_FOLDER, 'progress.json');
+
+// Helper function to read progress
+function readProgress() {
+    try {
+        if (fs.existsSync(PROGRESS_FILE)) {
+            return JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf8'));
+        }
+    } catch (error) {
+        console.error('Error reading progress file:', error);
+    }
+    return { viewed: [], updated: [] };
+}
+
+// Helper function to write progress
+function writeProgress(progress) {
+    try {
+        fs.writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 4));
+    } catch (error) {
+        console.error('Error writing progress file:', error);
+    }
+}
 
 // Get list of all images in the folder
 app.get('/api/images', (req, res) => {
@@ -82,6 +104,41 @@ app.post('/api/data/:id', (req, res) => {
         const jsonPath = path.join(DATA_FOLDER, `${imgId}.json`);
         
         fs.writeFileSync(jsonPath, JSON.stringify(req.body, null, 4));
+        
+        // Update progress - mark as updated
+        const progress = readProgress();
+        if (!progress.updated.includes(imgId)) {
+            progress.updated.push(imgId);
+        }
+        writeProgress(progress);
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get progress data
+app.get('/api/progress', (req, res) => {
+    try {
+        const progress = readProgress();
+        res.json(progress);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Mark image as viewed
+app.post('/api/progress/viewed/:id', (req, res) => {
+    try {
+        const imgId = req.params.id;
+        const progress = readProgress();
+        
+        if (!progress.viewed.includes(imgId)) {
+            progress.viewed.push(imgId);
+        }
+        
+        writeProgress(progress);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
