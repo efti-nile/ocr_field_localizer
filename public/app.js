@@ -6,6 +6,14 @@ let selectedField = null;
 let img = new Image();
 let canvas, ctx;
 
+// Zoom and pan state
+let zoomLevel = 1.0;
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
 // Color palette for fields
 const FIELD_COLORS = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
@@ -34,6 +42,13 @@ async function init() {
     });
     
     canvas.addEventListener('click', handleCanvasClick);
+    
+    // Add zoom and pan event listeners
+    canvas.addEventListener('wheel', handleZoom);
+    canvas.addEventListener('mousedown', handlePanStart);
+    canvas.addEventListener('mousemove', handlePanMove);
+    canvas.addEventListener('mouseup', handlePanEnd);
+    canvas.addEventListener('mouseleave', handlePanEnd);
     
     // Add keyboard shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts);
@@ -81,6 +96,11 @@ async function loadImage(index) {
             canvas.width = img.width;
             canvas.height = img.height;
             
+            // Reset zoom and pan
+            zoomLevel = 1.0;
+            panX = 0;
+            panY = 0;
+            
             // Draw everything
             drawImage();
             
@@ -98,6 +118,13 @@ async function loadImage(index) {
 function drawImage() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Save context state
+    ctx.save();
+    
+    // Apply zoom and pan transformations
+    ctx.translate(panX, panY);
+    ctx.scale(zoomLevel, zoomLevel);
     
     // Draw image
     ctx.drawImage(img, 0, 0);
@@ -123,6 +150,9 @@ function drawImage() {
             }
         });
     }
+    
+    // Restore context state
+    ctx.restore();
 }
 
 // Draw a single box
@@ -148,11 +178,12 @@ function drawLabel(box, fieldName, color) {
     const x = box[0][0];
     const y = box[0][1];
     
-    // Set font and measure text
-    ctx.font = 'bold 32px Arial';
+    // Set font size relative to image height (2.5% of image height)
+    const fontSize = Math.max(12, img.height * 0.025);
+    ctx.font = `bold ${fontSize}px Arial`;
     const textMetrics = ctx.measureText(fieldName);
     const textWidth = textMetrics.width;
-    const textHeight = 40;
+    const textHeight = fontSize * 1.2;
     
     // Draw background rectangle
     const padding = 6;
@@ -234,8 +265,12 @@ function handleCanvasClick(event) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    const x = (event.clientX - rect.left) * scaleX;
-    const y = (event.clientY - rect.top) * scaleY;
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+    
+    // Transform canvas coordinates to image coordinates (account for zoom and pan)
+    const x = (canvasX - panX) / zoomLevel;
+    const y = (canvasY - panY) / zoomLevel;
     
     // Check if click is inside any OCR box
     const clickedBox = findBoxAtPoint(x, y, currentData.ocr);
@@ -330,6 +365,62 @@ function navigateImage(direction) {
     }
 }
 
+// Handle zoom with mouse wheel
+function handleZoom(event) {
+    event.preventDefault();
+    
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const mouseY = (event.clientY - rect.top) * (canvas.height / rect.height);
+    
+    // Calculate zoom factor
+    const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.1, Math.min(10, zoomLevel * zoomFactor));
+    
+    // Adjust pan to zoom towards mouse position
+    const zoomRatio = newZoom / zoomLevel;
+    panX = mouseX - (mouseX - panX) * zoomRatio;
+    panY = mouseY - (mouseY - panY) * zoomRatio;
+    
+    zoomLevel = newZoom;
+    drawImage();
+}
+
+// Handle pan start (middle mouse button or space + left click)
+function handlePanStart(event) {
+    if (event.button === 1 || (event.button === 0 && event.shiftKey)) {
+        event.preventDefault();
+        isPanning = true;
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        canvas.style.cursor = 'grabbing';
+    }
+}
+
+// Handle pan move
+function handlePanMove(event) {
+    if (isPanning) {
+        const dx = event.clientX - lastMouseX;
+        const dy = event.clientY - lastMouseY;
+        
+        panX += dx;
+        panY += dy;
+        
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        
+        drawImage();
+    }
+}
+
+// Handle pan end
+function handlePanEnd(event) {
+    if (isPanning) {
+        isPanning = false;
+        canvas.style.cursor = 'crosshair';
+    }
+}
+
 // Handle keyboard shortcuts
 function handleKeyboardShortcuts(event) {
     // Ctrl+Left Arrow - Previous image
@@ -348,6 +439,15 @@ function handleKeyboardShortcuts(event) {
     if (event.ctrlKey && event.key === 's') {
         event.preventDefault();
         saveData();
+    }
+    
+    // Ctrl+0 - Reset zoom
+    if (event.ctrlKey && event.key === '0') {
+        event.preventDefault();
+        zoomLevel = 1.0;
+        panX = 0;
+        panY = 0;
+        drawImage();
     }
 }
 
