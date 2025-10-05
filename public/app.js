@@ -35,6 +35,9 @@ async function init() {
     
     canvas.addEventListener('click', handleCanvasClick);
     
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    
     // Load first image
     if (images.length > 0) {
         loadImage(0);
@@ -327,9 +330,37 @@ function navigateImage(direction) {
     }
 }
 
+// Handle keyboard shortcuts
+function handleKeyboardShortcuts(event) {
+    // Ctrl+Left Arrow - Previous image
+    if (event.ctrlKey && event.key === 'ArrowLeft') {
+        event.preventDefault();
+        navigateImage(-1);
+    }
+    
+    // Ctrl+Right Arrow - Next image
+    if (event.ctrlKey && event.key === 'ArrowRight') {
+        event.preventDefault();
+        navigateImage(1);
+    }
+    
+    // Ctrl+S - Save changes
+    if (event.ctrlKey && event.key === 's') {
+        event.preventDefault();
+        saveData();
+    }
+}
+
 // Save data to server
 async function saveData() {
+    const saveBtn = document.getElementById('saveBtn');
+    const originalText = saveBtn.textContent;
+    
     try {
+        // Visual feedback - change button text
+        saveBtn.textContent = '💾 Saving...';
+        saveBtn.disabled = true;
+        
         const imageInfo = images[currentImageIndex];
         const response = await fetch(`/api/data/${imageInfo.id}`, {
             method: 'POST',
@@ -342,13 +373,27 @@ async function saveData() {
         const result = await response.json();
         
         if (result.success) {
-            alert('Changes saved successfully!');
+            // Show success feedback briefly
+            saveBtn.textContent = '✓ Saved!';
+            setTimeout(() => {
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            }, 1000);
         } else {
-            alert('Error saving changes.');
+            saveBtn.textContent = '✗ Error';
+            setTimeout(() => {
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            }, 2000);
+            console.error('Error saving changes.');
         }
     } catch (error) {
         console.error('Error saving data:', error);
-        alert('Error saving changes.');
+        saveBtn.textContent = '✗ Error';
+        setTimeout(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.disabled = false;
+        }, 2000);
     }
 }
 
